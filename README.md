@@ -8,18 +8,14 @@
     - [Cost](#cost)
 2. [Prerequisites](#prerequisites)
     - [Operating System](#operating-system)
-3. [Deployment Steps](#deployment-steps-required)
-4. [Deployment Validation](#deployment-validation-required)
-5. [Running the Guidance](#running-the-guidance-required)
-6. [Next Steps](#next-steps-required)
-7. [Cleanup](#cleanup-required)
-
-***Optional***
-
+3. [Deployment Steps](#deployment-steps)
+4. [Deployment Validation](#deployment-validation)
+5. [Running the Guidance](#running-the-guidance)
+6. [Next Steps](#next-steps)
+7. [Cleanup](#cleanup)
 8. [FAQ, known issues, additional considerations, and limitations](#faq-known-issues-additional-considerations-and-limitations-optional)
-9. [Revisions](#revisions-optional)
-10. [Notices](#notices-optional)
-11. [Authors](#authors-optional)
+9. [Notices](#notices-optional)
+10. [Authors](#authors-optional)
 
 ## Overview
 
@@ -49,7 +45,7 @@ This guidance provides an example of a customer-managed integration between Dyna
 
    ![Architecture](./assets/images/architecture-initial.png)
 
-   To load the initial set of data from DynamoDB, the following steps are executed.
+To load the initial set of data from DynamoDB, the following steps are executed.
 
 1. To process existing data, an AWS Lambda function is invoked to describe the Amazon DynamoDB table and split into a number of segments based on the returned item count. The function writes one message to an Amazon Simple Queue Service (SQS) queue for each segment number.
 
@@ -81,10 +77,18 @@ _We recommend creating a [Budget](https://docs.aws.amazon.com/cost-management/la
 
 The following table provides a sample cost breakdown for deploying this Guidance with the default parameters in the US East (N. Virginia) Region for one month.
 
-| AWS service  | Dimensions | Cost [USD] |
-| ----------- | ------------ | ------------ |
-| Amazon API Gateway | 1,000,000 REST API calls per month  | $ 3.50month |
-| Amazon Cognito | 1,000 active users per month without advanced security feature | $ 0.00 |
+| AWS Service | Dimensions | Cost [USD] | frequency |
+| ----------- | ----------- | ---------- | ---------- |
+| DynamoDB Data import from S3 | $0.15 per GB | $0.04 | one time |
+| DynamoDB Read Request Units (RRU) | $0.25 per million read request units | $0.02 | one time |
+| DynamoDB Read Request Units (RRU) | $0.25 per million read request units | $0.25 | monthly |
+| DynamoDB Write Request Units (WRU) | $1.25 per million write request units | $1.25 | monthly |
+| DynamoDB Standard table class | $0.25 per GB-month | $0.07 | monthly |
+| OpenSearch Service On-Demand t3.medium.search | $0.073 per hour | $53.29 | monthly |
+| EC2 On-Demand t3.medium | $0.0416 per hour | $30.37 | monthly |
+| Secrets Manager | $0.40 per secret per month | $0.40 | monthly |
+| VPC Interface Endpoint | $0.01 per AZ hour | $7.30 | monthly |
+
 
 ## Prerequisites
 
@@ -99,59 +103,109 @@ Make sure you have the following tools installed on your environment:
 
 These deployment instructions are optimized to best work on Amazon Linux 2023 (ami-0eb9d67c52f5c80e5).  Deployment in another OS may require additional steps.
 
-### aws cdk bootstrap (if sample code has aws-cdk)
+## Deployment Steps
 
-<If using aws-cdk, include steps for account bootstrap for new cdk users.>
-
-**Example blurb:** “This Guidance uses aws-cdk. If you are using aws-cdk for first time, please perform the below bootstrapping....”
-
-## Deployment Steps (required)
-
-Deployment steps must be numbered, comprehensive, and usable to customers at any level of AWS expertise. The steps must include the precise commands to run, and describe the action it performs.
-
-* All steps must be numbered.
-* If the step requires manual actions from the AWS console, include a screenshot if possible.
-* The steps must start with the following command to clone the repo. ```git clone xxxxxxx```
-* If applicable, provide instructions to create the Python virtual environment, and installing the packages using ```requirement.txt```.
-* If applicable, provide instructions to capture the deployed resource ARN or ID using the CLI command (recommended), or console action.
-
- 
-1. Clone the repo using command ```git clone xxxxxxxxxx```
-1. cd to the repo folder ```cd <repo-name>```
-1. Install packages in requirements using command ```pip install requirement.txt```
-1. Edit content of **file-name** and replace **s3-bucket** with the bucket name in your account.
-1. Run this command to deploy the stack ```cdk deploy``` 
-1. Capture the domain name created by running this CLI command ```aws apigateway ............```
+1. Clone the repo using command ```git clone git@github.com:aws-solutions-library-samples/REPO.git```
+1. cd to the repo folder ```cd REPO```
+1. Activate the apps virtual environment ```source .venv/bin/activate```
+1. Install packages in requirements using command ```pip install -r requirement.txt```
+1. Bootstrap the environment, using the account number and region you plan to deploy to ```cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1```
+1. Run the following command to synthesize the stack ```cdk synth```
+1. Run the following command to deploy the stack ```cdk deploy``` 
 
 
+## Deployment Validation
 
-## Deployment Validation  (required)
-
-<Provide steps to validate a successful deployment, such as terminal output, verifying that the resource is created, status of the CloudFormation template, etc.>
-
-
-**Examples:**
-
-* Open CloudFormation console and verify the status of the template with the name starting with xxxxxx.
-* If deployment is successful, you should see an active database instance with the name starting with <xxxxx> in        the RDS console.
-*  Run the following CLI command to validate the deployment: ```aws cloudformation describe xxxxxxxxxxxxx```
+* Open CloudFormation console and verify the status of the template with the name starting with DynamoDBOpenSearchStack.
+* If deployment is successful, you should see an active DynamoDB table and OpenSearch Service cluster with names starting with `DynamoDBOpenSearchStack` in the DynamoDB and OpenSearch consoles.
+* If deployment is successful, you should see several outputs from the CDK template in your console window.
 
 
+## Running the Guidance
 
-## Running the Guidance (required)
+1. Wait for the CDK template to finish deploying if it has not already done so.
+1. Retrieve the OpenSearch cluster admin password from Secrets Manager. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.AdminPasswordSecretArn" and insert it into the following aws cli command as the secret-id `aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:us-west-2:111122223333:secret:AdminPasswordSecreta1b2c3d4-EXAMPLE11111-a1b2c3 --query 'SecretString' --output text`
+1. Copy the value for the OpenSearch admin password from the cli response, making sure not to include the surrounding quotation marks.
+1. In a web browser, navigate to the proxy jumphost for your OpenSearch cluster. This value is provided in the CDK and CloudFormation outputs as "DynamoDBOpenSearchStack.DashboardsURLviaJumphost", and will be in the form of `https://XXX.XXX.XXX.XXX`.
+1. Enter the username "opensearch" and the password you copied in the previous step, then click "Log in".
+   ![step1](./assets/images/step1.png)
+1. Click "Dismiss".
+   ![step2](./assets/images/step2.png)
+1. Leave "Global" selected as the tenant and click "Confirm".
+   ![step3](./assets/images/step3.png)
+1. Click "Explore on my own"
+   ![step4](./assets/images/step4.png)
+1. Under manage your data, click "Interact w ith the OpenSearch API".
+   ![step5](./assets/images/step5.png)
+1. In the Dev Tools console, enter the following query, then click the play button. You will see results in the right pane. These were copied over from DynamoDB by the initial load Lambda.
+   ```
+   GET /example-index/_search
+   {
+      "query:": {
+         "match_all": {}
+      }
+   }
+   ```
+   ![step6](./assets/images/step6.png)
+1. Write a new item into DynamoDB to demonstrate ongoing replication. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.DynamoDBTableName". Run the following aws cli command, replacing the table-name value with the value you copied from outputs.
+   ```
+   aws dynamodb put-item --table-name DynamoDBOpenSearchStack-DynamoDBTablecdef-EXAMPLE11111 --item '{
+     "product_id": {
+       "S": "XJQPTNAJSLC"
+     },
+     "helpful_votes#review_id": {
+       "S": "02#KJFLGFGFFGTTVT"
+     },
+     "customer_id": {
+       "N": "141579336"
+     },
+     "helpful_votes": {
+       "N": "2"
+     },
+     "product_category": {
+       "S": "Home & Kitchen"
+     },
+     "product_title": {
+       "S": "Cozy Comfort Heated Blanket"
+     },
+     "review_body": {
+       "S": "This heated blanket is great!"
+     },
+     "review_date": {
+       "S": "2024-06-07"
+     },
+     "review_id": {
+       "S": "KJFLGFGFFGTTVT"
+     },
+     "star_rating": {
+       "N": "5"
+     },
+     "total_votes": {
+       "N": "2"
+     },
+     "verified_purchase": {
+       "BOOL": true
+     }
+   }'
+   ```
+1. After writing the item to DynamoDB, return to the OpenSearch Dev Tools console. Enter and run the following query, searching for the specific item you added to DynamoDB.
+   ```
+   GET /example-index/_search
+   {
+      "query:": {
+         "term": {
+            "product_id.keyword": "XJQPTNAJSLC"
+         }
+      }
+   }
+   ```
+   ![step7](./assets/images/step7.png)
+1. You will see results in the right pane. These were copied over from DynamoDB by the ongoing replication Lambda which was invoked by DynamoDB Streams.
+   ![step8](./assets/images/step8.png)
 
-<Provide instructions to run the Guidance with the sample data or input provided, and interpret the output received.> 
-
-This section should include:
-
-* Guidance inputs
-* Commands to run
-* Expected output (provide screenshot if possible)
-* Output description
 
 
-
-## Next Steps (required)
+## Next Steps
 
 This guidance provides a basic example of a DynamoDB integration with OpenSearch through DynamoDB Streams and Lambda. In a production environment, a similar solution should take several things into consideration. Here are some additional questions and considerations.
 
@@ -161,10 +215,9 @@ This guidance provides a basic example of a DynamoDB integration with OpenSearch
 
 
 
-## Cleanup (required)
+## Cleanup
 
 To cleanup installed resources, run `cdk destroy`.
-
 
 ## FAQ, known issues, additional considerations, and limitations
 
