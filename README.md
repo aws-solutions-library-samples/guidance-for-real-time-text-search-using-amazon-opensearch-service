@@ -119,7 +119,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    ```
 1. Install packages in requirements.
    ```bash
-   pip install -r requirement.txt
+   pip install -r requirements.txt
    ```
 1. Bootstrap the environment, using the account number and region you plan to deploy to.
    ```bash
@@ -150,7 +150,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:us-west-2:111122223333:secret:AdminPasswordSecreta1b2c3d4-EXAMPLE11111-a1b2c3 --query 'SecretString' --output text
    ```
 1. Copy the value for the OpenSearch admin password from the cli response, making sure not to include the surrounding quotation marks.
-1. In a web browser, navigate to the proxy jumphost for your OpenSearch cluster. This value is provided in the CDK and CloudFormation outputs as "DynamoDBOpenSearchStack.DashboardsURLviaJumphost", and will be in the form of `"https://XXX.XXX.XXX.XXX"`.
+1. In a web browser, navigate to the proxy jumphost for your OpenSearch cluster. This value is provided in the CDK and CloudFormation outputs as "DynamoDBOpenSearchStack.DashboardsURLviaJumphost", and will be in the form of `"https://XXX.XXX.XXX.XXX"`. Accept the self-signed certificate. In a production environment, you would use a certificate signed to your domain (see [Next Steps](#next-steps) for details).
 1. Enter the username "opensearch" and the password you copied in the previous step, then click "Log in".
    ![step1](./assets/images/step1.png)
 1. Click "Dismiss".
@@ -165,9 +165,9 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    ```
    GET /example-index/_search
    {
-      "query:": {
-         "match_all": {}
-      }
+     "query": {
+       "match_all": {}
+     }
    }
    ```
    ![step6](./assets/images/step6.png)
@@ -214,13 +214,13 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    ```
 1. After writing the item to DynamoDB, return to the OpenSearch Dev Tools console. Enter and run the following query, searching for the specific item you added to DynamoDB.
    ```
-   GET /example-index/_search
+   GET example-index/_search
    {
-      "query:": {
-         "term": {
-            "product_id.keyword": "XJQPTNAJSLC"
-         }
-      }
+     "query": {
+       "term": {
+         "product_id.keyword": "XJQPTNAJSLC"
+       }
+     }
    }
    ```
    ![step7](./assets/images/step7.png)
