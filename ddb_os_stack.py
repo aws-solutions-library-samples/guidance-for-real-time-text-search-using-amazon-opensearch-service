@@ -2,7 +2,7 @@ from aws_cdk import (
     Stack, App, RemovalPolicy, Duration, CfnOutput, aws_ec2 as ec2, aws_dynamodb as dynamodb,
     aws_iam as iam, aws_lambda as lambda_, aws_sqs as sqs, aws_s3_assets as s3_assets,
     aws_opensearchservice as opensearch, aws_lambda_event_sources as eventsources, CustomResource,
-    aws_secretsmanager as secretsmanager
+    aws_secretsmanager as secretsmanager, aws_logs as logs
 )
 from constructs import Construct
 import os
@@ -57,6 +57,38 @@ class DynamoDBOpenSearchStack(Stack):
             service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
             subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             private_dns_enabled=True
+        )
+
+        # Create a log group for VPC Flow Logs
+        flow_log_group = logs.LogGroup(self, "FlowLogGroup",
+            retention=logs.RetentionDays.ONE_MONTH
+        )
+
+        # Create the IAM role for VPC Flow Logs
+        flow_log_role = iam.Role(self, "FlowLogRole",
+            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com")
+        )
+
+        # Add inline policy to the IAM role for VPC Flow Logs
+        flow_log_role.add_to_policy(iam.PolicyStatement(
+            actions=[
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            resources=[
+                flow_log_group.log_group_arn,
+                f"{flow_log_group.log_group_arn}:log-stream:*"
+            ]
+        ))
+
+        # Create the VPC Flow Logs
+        flow_log = ec2.FlowLog(self, "FlowLog",
+            resource_type=ec2.FlowLogResourceType.from_vpc(vpc),
+            destination=ec2.FlowLogDestination.to_cloud_watch_logs(flow_log_group, flow_log_role),
+            traffic_type=ec2.FlowLogTrafficType.ALL
         )
 
         # IAM Roles
@@ -336,25 +368,21 @@ class DynamoDBOpenSearchStack(Stack):
 
         # EC2 Jump host - proxy for OpenSearch Dashboards
 
-        # Create EC2 Key Pair
-        key_name = f"ddb-os-key-pair-{str(uuid.uuid4())[:8]}"
-        key_pair = ec2.CfnKeyPair(self, "KeyPair",
-                                     key_name=key_name,
-                                     tags=[
-                                         {"key": "Name", "value": key_name}
-                                     ])
-
-        # Jump host for SSH tunneling and direct access 
+        # Jump host for and direct access 
   
         instance = ec2.Instance(self, f'JumpHost',
-                                instance_type=ec2.InstanceType('t3.medium'),
-                                vpc=vpc,
-                                machine_image=ec2.MachineImage.latest_amazon_linux2(),
-                                vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-                                key_name=key_pair.key_name,
-                                role=jumphost_role,
-                                )
-        instance.connections.allow_from_any_ipv4(ec2.Port.tcp(22), 'SSH')
+            instance_type=ec2.InstanceType('t3.medium'),
+            vpc=vpc,
+            block_devices=[ec2.BlockDevice(
+                device_name="/dev/sdh",
+                volume=ec2.BlockDeviceVolume.ebs(10,
+                    encrypted=True
+                )
+            )],
+            machine_image=ec2.MachineImage.latest_amazon_linux2(),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            role=jumphost_role,
+        )
         instance.connections.allow_from_any_ipv4(ec2.Port.tcp(443), 'HTTPS')
 
         stmt = iam.PolicyStatement(actions=['es:*'],
@@ -400,9 +428,6 @@ class DynamoDBOpenSearchStack(Stack):
         CfnOutput(self, "DynamoDBTableName",
                   value=table.table_name,
                   description="Name of the DynamoDB table")
-        CfnOutput(self, "EC2KeyPairName",
-                  value=key_name,
-                  description="Name of the EC2 Key Pair")
 
 app = App()
 DynamoDBOpenSearchStack(app, "DynamoDBOpenSearchStack")
