@@ -162,7 +162,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
 1. Under manage your data, click "Interact w ith the OpenSearch API".
    ![step5](./assets/images/step5.png)
 1. In the Dev Tools console, enter the following query, then click the play button. You will see results in the right pane. These were copied over from DynamoDB by the initial load Lambda.
-   ```json
+   ```
    GET /example-index/_search
    {
       "query:": {
@@ -172,7 +172,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    ```
    ![step6](./assets/images/step6.png)
 1. Write a new item into DynamoDB to demonstrate ongoing replication. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.DynamoDBTableName". Run the following aws cli command, replacing the table-name value with the value you copied from outputs.
-   ```json
+   ```bash
    aws dynamodb put-item --table-name DynamoDBOpenSearchStack-DynamoDBTablecdef-EXAMPLE11111 --item '{
      "product_id": {
        "S": "XJQPTNAJSLC"
@@ -213,7 +213,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    }'
    ```
 1. After writing the item to DynamoDB, return to the OpenSearch Dev Tools console. Enter and run the following query, searching for the specific item you added to DynamoDB.
-   ```json
+   ```
    GET /example-index/_search
    {
       "query:": {
