@@ -105,28 +105,52 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
 
 ## Deployment Steps
 
-1. Clone the repo using command `git clone git@github.com:aws-solutions-library-samples/REPO.git`
-1. cd to the repo folder `cd REPO`
-1. Activate the apps virtual environment `source .venv/bin/activate`
-1. Install packages in requirements using command `pip install -r requirement.txt`
-1. Bootstrap the environment, using the account number and region you plan to deploy to `cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1`
-1. Run the following command to synthesize the stack `cdk synth`
-1. Run the following command to deploy the stack `cdk deploy`
+1. Clone the repo.
+   ```bash
+   git clone git@github.com:aws-solutions-library-samples/REPO.git
+   ```
+1. cd to the repo folder.
+   ```bash
+   cd REPO
+   ```
+1. Activate the app's virtual environment.
+   ```bash
+   source .venv/bin/activate
+   ```
+1. Install packages in requirements.
+   ```bash
+   pip install -r requirement.txt
+   ```
+1. Bootstrap the environment, using the account number and region you plan to deploy to.
+   ```bash
+   cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1
+   ```
+1. Synthesize the stack.
+   ```bash
+   cdk synth
+   ```
+1. Deploy the stack.
+   ```bash
+   cdk deploy
+   ```
 
 
 ## Deployment Validation
 
 * Open CloudFormation console and verify the status of the template with the name starting with DynamoDBOpenSearchStack.
-* If deployment is successful, you should see an active DynamoDB table and OpenSearch Service cluster with names starting with `DynamoDBOpenSearchStack` in the DynamoDB and OpenSearch consoles.
+* If deployment is successful, you should see an active DynamoDB table and OpenSearch Service cluster with names starting with "DynamoDBOpenSearchStack" in the DynamoDB and OpenSearch consoles.
 * If deployment is successful, you should see several outputs from the CDK template in your console window.
 
 
 ## Running the Guidance
 
 1. Wait for the CDK template to finish deploying if it has not already done so.
-1. Retrieve the OpenSearch cluster admin password from Secrets Manager. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.AdminPasswordSecretArn" and insert it into the following aws cli command as the secret-id `aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:us-west-2:111122223333:secret:AdminPasswordSecreta1b2c3d4-EXAMPLE11111-a1b2c3 --query 'SecretString' --output text`
+1. Retrieve the OpenSearch cluster admin password from Secrets Manager. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.AdminPasswordSecretArn" and insert it into the following aws cli command as the secret-id. 
+   ```bash
+   aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:us-west-2:111122223333:secret:AdminPasswordSecreta1b2c3d4-EXAMPLE11111-a1b2c3 --query 'SecretString' --output text
+   ```
 1. Copy the value for the OpenSearch admin password from the cli response, making sure not to include the surrounding quotation marks.
-1. In a web browser, navigate to the proxy jumphost for your OpenSearch cluster. This value is provided in the CDK and CloudFormation outputs as "DynamoDBOpenSearchStack.DashboardsURLviaJumphost", and will be in the form of `https://XXX.XXX.XXX.XXX`.
+1. In a web browser, navigate to the proxy jumphost for your OpenSearch cluster. This value is provided in the CDK and CloudFormation outputs as "DynamoDBOpenSearchStack.DashboardsURLviaJumphost", and will be in the form of `"https://XXX.XXX.XXX.XXX"`.
 1. Enter the username "opensearch" and the password you copied in the previous step, then click "Log in".
    ![step1](./assets/images/step1.png)
 1. Click "Dismiss".
@@ -138,7 +162,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
 1. Under manage your data, click "Interact w ith the OpenSearch API".
    ![step5](./assets/images/step5.png)
 1. In the Dev Tools console, enter the following query, then click the play button. You will see results in the right pane. These were copied over from DynamoDB by the initial load Lambda.
-   ```
+   ```json
    GET /example-index/_search
    {
       "query:": {
@@ -148,7 +172,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    ```
    ![step6](./assets/images/step6.png)
 1. Write a new item into DynamoDB to demonstrate ongoing replication. From the CDK and CloudFormation outputs, copy the value for "DynamoDBOpenSearchStack.DynamoDBTableName". Run the following aws cli command, replacing the table-name value with the value you copied from outputs.
-   ```
+   ```json
    aws dynamodb put-item --table-name DynamoDBOpenSearchStack-DynamoDBTablecdef-EXAMPLE11111 --item '{
      "product_id": {
        "S": "XJQPTNAJSLC"
@@ -189,7 +213,7 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
    }'
    ```
 1. After writing the item to DynamoDB, return to the OpenSearch Dev Tools console. Enter and run the following query, searching for the specific item you added to DynamoDB.
-   ```
+   ```json
    GET /example-index/_search
    {
       "query:": {
