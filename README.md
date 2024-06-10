@@ -258,5 +258,5 @@ For any feedback, questions, or suggestions, please use the issues tab under thi
 
 ## Authors
 
-John Terhune
-Jon Handler
+- John Terhune
+- Jon Handler
