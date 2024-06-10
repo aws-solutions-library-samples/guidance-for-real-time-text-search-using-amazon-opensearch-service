@@ -105,13 +105,13 @@ These deployment instructions are optimized to best work on Amazon Linux 2023 (a
 
 ## Deployment Steps
 
-1. Clone the repo using command ```git clone git@github.com:aws-solutions-library-samples/REPO.git```
-1. cd to the repo folder ```cd REPO```
-1. Activate the apps virtual environment ```source .venv/bin/activate```
-1. Install packages in requirements using command ```pip install -r requirement.txt```
-1. Bootstrap the environment, using the account number and region you plan to deploy to ```cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1```
-1. Run the following command to synthesize the stack ```cdk synth```
-1. Run the following command to deploy the stack ```cdk deploy``` 
+1. Clone the repo using command `git clone git@github.com:aws-solutions-library-samples/REPO.git`
+1. cd to the repo folder `cd REPO`
+1. Activate the apps virtual environment `source .venv/bin/activate`
+1. Install packages in requirements using command `pip install -r requirement.txt`
+1. Bootstrap the environment, using the account number and region you plan to deploy to `cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1`
+1. Run the following command to synthesize the stack `cdk synth`
+1. Run the following command to deploy the stack `cdk deploy`
 
 
 ## Deployment Validation
