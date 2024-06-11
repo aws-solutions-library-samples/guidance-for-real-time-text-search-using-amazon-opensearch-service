@@ -27,11 +27,14 @@
 import ssl
 import time
 import warnings
+from typing import Any, Callable, Collection, Mapping, Optional, Union
 
-import urllib3  # type: ignore
+import urllib3
 from urllib3.exceptions import ReadTimeoutError
-from urllib3.exceptions import SSLError as UrllibSSLError  # type: ignore
-from urllib3.util.retry import Retry  # type: ignore
+from urllib3.exceptions import SSLError as UrllibSSLError
+from urllib3.util.retry import Retry
+
+from opensearchpy.metrics import Metrics, MetricsNone
 
 from ..compat import reraise_exceptions, urlencode
 from ..exceptions import (
@@ -49,7 +52,7 @@ VERIFY_CERTS_DEFAULT = object()
 SSL_SHOW_WARN_DEFAULT = object()
 
 
-def create_ssl_context(**kwargs):
+def create_ssl_context(**kwargs: Any) -> Any:
     """
     A helper function around creating an SSL context
 
@@ -86,36 +89,41 @@ class Urllib3HttpConnection(Connection):
         ``ssl`` module for exact options for your environment).
     :arg ssl_assert_hostname: use hostname verification if not `False`
     :arg ssl_assert_fingerprint: verify the supplied certificate fingerprint if not `None`
-    :arg maxsize: the number of connections which will be kept open to this
+    :arg pool_maxsize: the number of connections which will be kept open to this
         host. See https://urllib3.readthedocs.io/en/1.4/pools.html#api for more
         information.
     :arg headers: any custom http headers to be add to requests
     :arg http_compress: Use gzip compression
     :arg opaque_id: Send this value in the 'X-Opaque-Id' HTTP header
         For tracing all requests made by this transport.
+    :arg metrics: metrics is an instance of a subclass of the
+        :class:`~opensearchpy.Metrics` class, used for collecting
+        and reporting metrics related to the client's operations;
     """
 
     def __init__(
         self,
-        host="localhost",
-        port=None,
-        http_auth=None,
-        use_ssl=False,
-        verify_certs=VERIFY_CERTS_DEFAULT,
-        ssl_show_warn=SSL_SHOW_WARN_DEFAULT,
-        ca_certs=None,
-        client_cert=None,
-        client_key=None,
-        ssl_version=None,
-        ssl_assert_hostname=None,
-        ssl_assert_fingerprint=None,
-        maxsize=10,
-        headers=None,
-        ssl_context=None,
-        http_compress=None,
-        opaque_id=None,
-        **kwargs
-    ):
+        host: str = "localhost",
+        port: Optional[int] = None,
+        http_auth: Any = None,
+        use_ssl: bool = False,
+        verify_certs: Any = VERIFY_CERTS_DEFAULT,
+        ssl_show_warn: Any = SSL_SHOW_WARN_DEFAULT,
+        ca_certs: Any = None,
+        client_cert: Any = None,
+        client_key: Any = None,
+        ssl_version: Any = None,
+        ssl_assert_hostname: Any = None,
+        ssl_assert_fingerprint: Any = None,
+        pool_maxsize: Any = None,
+        headers: Any = None,
+        ssl_context: Any = None,
+        http_compress: Any = None,
+        opaque_id: Any = None,
+        metrics: Metrics = MetricsNone(),
+        **kwargs: Any
+    ) -> None:
+        self.metrics = metrics
         # Initialize headers before calling super().__init__().
         self.headers = urllib3.make_headers(keep_alive=True)
 
@@ -128,12 +136,19 @@ class Urllib3HttpConnection(Connection):
             opaque_id=opaque_id,
             **kwargs
         )
-        if http_auth is not None:
-            if isinstance(http_auth, (tuple, list)):
-                http_auth = ":".join(http_auth)
-            self.headers.update(urllib3.make_headers(basic_auth=http_auth))
 
-        pool_class = urllib3.HTTPConnectionPool
+        self.http_auth = http_auth
+        if self.http_auth is not None:
+            if isinstance(self.http_auth, Callable):  # type: ignore
+                pass
+            elif isinstance(self.http_auth, (tuple, list)):
+                self.headers.update(
+                    urllib3.make_headers(basic_auth=":".join(http_auth))
+                )
+            else:
+                self.headers.update(urllib3.make_headers(basic_auth=http_auth))
+
+        pool_class: Any = urllib3.HTTPConnectionPool
         kw = {}
 
         # if providing an SSL context, raise error if any other SSL related flag is used
@@ -203,18 +218,37 @@ class Urllib3HttpConnection(Connection):
                 if not ssl_show_warn:
                     urllib3.disable_warnings()
 
-        self.pool = pool_class(
-            self.hostname, port=self.port, timeout=self.timeout, maxsize=maxsize, **kw
+        if pool_maxsize and isinstance(pool_maxsize, int):
+            kw["maxsize"] = pool_maxsize
+
+        self._urllib3_pool_factory = lambda: pool_class(
+            self.hostname, port=self.port, timeout=self.timeout, **kw
         )
+        self._create_urllib3_pool()
+
+    def _create_urllib3_pool(self) -> None:
+        self.pool = self._urllib3_pool_factory()  # type: ignore
 
     def perform_request(
-        self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None
-    ):
+        self,
+        method: str,
+        url: str,
+        params: Optional[Mapping[str, Any]] = None,
+        body: Optional[bytes] = None,
+        timeout: Optional[Union[int, float]] = None,
+        ignore: Collection[int] = (),
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> Any:
+        if self.pool is None:
+            self._create_urllib3_pool()
+        assert self.pool is not None
+
         url = self.url_prefix + url
         if params:
             url = "%s?%s" % (url, urlencode(params))
 
         full_url = self.host + url
+
         start = time.time()
         orig_body = body
         try:
@@ -237,6 +271,12 @@ class Urllib3HttpConnection(Connection):
                 body = self._gzip_compress(body)
                 request_headers["content-encoding"] = "gzip"
 
+            if self.http_auth is not None:
+                if isinstance(self.http_auth, Callable):  # type: ignore
+                    request_headers.update(self.http_auth(method, full_url, body))
+
+            self.metrics.request_start()
+
             response = self.pool.urlopen(
                 method, url, body, retries=Retry(False), headers=request_headers, **kw
             )
@@ -253,6 +293,8 @@ class Urllib3HttpConnection(Connection):
             if isinstance(e, ReadTimeoutError):
                 raise ConnectionTimeout("TIMEOUT", str(e), e)
             raise ConnectionError("N/A", str(e), e)
+        finally:
+            self.metrics.request_end()
 
         # raise warnings if any from the 'Warnings' header.
         warning_headers = response.headers.get_all("warning", ())
@@ -275,11 +317,13 @@ class Urllib3HttpConnection(Connection):
 
         return response.status, response.headers, raw_data
 
-    def get_response_headers(self, response):
+    def get_response_headers(self, response: Any) -> Any:
         return {header.lower(): value for header, value in response.headers.items()}
 
-    def close(self):
+    def close(self) -> None:
         """
         Explicitly closes connection
         """
-        self.pool.close()
+        if self.pool:
+            self.pool.close()
+            self.pool = None

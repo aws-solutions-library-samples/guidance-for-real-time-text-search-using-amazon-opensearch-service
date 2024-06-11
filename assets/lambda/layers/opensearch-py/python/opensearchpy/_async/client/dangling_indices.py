@@ -25,23 +25,60 @@
 #  under the License.
 
 
+# ------------------------------------------------------------------------------------------
+# THIS CODE IS AUTOMATICALLY GENERATED AND MANUAL EDITS WILL BE LOST
+#
+# To contribute, kindly make modifications in the opensearch-py client generator
+# or in the OpenSearch API specification, and run `nox -rs generate`. See DEVELOPER_GUIDE.md
+# and https://github.com/opensearch-project/opensearch-api-specification for details.
+# -----------------------------------------------------------------------------------------+
+
+
+from typing import Any
+
 from .utils import SKIP_IN_PATH, NamespacedClient, _make_path, query_params
 
 
 class DanglingIndicesClient(NamespacedClient):
     @query_params(
-        "accept_data_loss", "master_timeout", "cluster_manager_timeout", "timeout"
+        "accept_data_loss",
+        "cluster_manager_timeout",
+        "error_trace",
+        "filter_path",
+        "human",
+        "master_timeout",
+        "pretty",
+        "source",
+        "timeout",
     )
-    async def delete_dangling_index(self, index_uuid, params=None, headers=None):
+    async def delete_dangling_index(
+        self,
+        index_uuid: Any,
+        params: Any = None,
+        headers: Any = None,
+    ) -> Any:
         """
-        Deletes the specified dangling index
+        Deletes the specified dangling index.
 
 
         :arg index_uuid: The UUID of the dangling index
         :arg accept_data_loss: Must be set to true in order to delete
             the dangling index
-        :arg master_timeout (Deprecated: use cluster_manager_timeout): Specify timeout for connection to master
-        :arg cluster_manager_timeout: Specify timeout for connection to cluster_manager
+        :arg cluster_manager_timeout: Operation timeout for connection
+            to cluster-manager node.
+        :arg error_trace: Whether to include the stack trace of returned
+            errors.
+        :arg filter_path: Comma-separated list of filters used to reduce
+            the response.
+        :arg human: Whether to return human readable values for
+            statistics.
+        :arg master_timeout (Deprecated: To promote inclusive language,
+            use 'cluster_manager_timeout' instead.): Specify timeout for connection
+            to master
+        :arg pretty: Whether to pretty format the returned JSON
+            response.
+        :arg source: The URL-encoded request definition. Useful for
+            libraries that do not accept a request body for non-POST requests.
         :arg timeout: Explicit operation timeout
         """
         if index_uuid in SKIP_IN_PATH:
@@ -55,18 +92,44 @@ class DanglingIndicesClient(NamespacedClient):
         )
 
     @query_params(
-        "accept_data_loss", "master_timeout", "cluster_manager_timeout", "timeout"
+        "accept_data_loss",
+        "cluster_manager_timeout",
+        "error_trace",
+        "filter_path",
+        "human",
+        "master_timeout",
+        "pretty",
+        "source",
+        "timeout",
     )
-    async def import_dangling_index(self, index_uuid, params=None, headers=None):
+    async def import_dangling_index(
+        self,
+        index_uuid: Any,
+        params: Any = None,
+        headers: Any = None,
+    ) -> Any:
         """
-        Imports the specified dangling index
+        Imports the specified dangling index.
 
 
         :arg index_uuid: The UUID of the dangling index
         :arg accept_data_loss: Must be set to true in order to import
             the dangling index
-        :arg master_timeout (Deprecated: use cluster_manager_timeout): Specify timeout for connection to master
-        :arg cluster_manager_timeout: Specify timeout for connection to cluster_manager
+        :arg cluster_manager_timeout: Operation timeout for connection
+            to cluster-manager node.
+        :arg error_trace: Whether to include the stack trace of returned
+            errors.
+        :arg filter_path: Comma-separated list of filters used to reduce
+            the response.
+        :arg human: Whether to return human readable values for
+            statistics.
+        :arg master_timeout (Deprecated: To promote inclusive language,
+            use 'cluster_manager_timeout' instead.): Specify timeout for connection
+            to master
+        :arg pretty: Whether to pretty format the returned JSON
+            response.
+        :arg source: The URL-encoded request definition. Useful for
+            libraries that do not accept a request body for non-POST requests.
         :arg timeout: Explicit operation timeout
         """
         if index_uuid in SKIP_IN_PATH:
@@ -76,11 +139,26 @@ class DanglingIndicesClient(NamespacedClient):
             "POST", _make_path("_dangling", index_uuid), params=params, headers=headers
         )
 
-    @query_params()
-    async def list_dangling_indices(self, params=None, headers=None):
+    @query_params("error_trace", "filter_path", "human", "pretty", "source")
+    async def list_dangling_indices(
+        self,
+        params: Any = None,
+        headers: Any = None,
+    ) -> Any:
         """
         Returns all dangling indices.
 
+
+        :arg error_trace: Whether to include the stack trace of returned
+            errors.
+        :arg filter_path: Comma-separated list of filters used to reduce
+            the response.
+        :arg human: Whether to return human readable values for
+            statistics.
+        :arg pretty: Whether to pretty format the returned JSON
+            response.
+        :arg source: The URL-encoded request definition. Useful for
+            libraries that do not accept a request body for non-POST requests.
         """
         return await self.transport.perform_request(
             "GET", "/_dangling", params=params, headers=headers

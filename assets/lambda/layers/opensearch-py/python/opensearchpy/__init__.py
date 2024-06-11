@@ -30,14 +30,14 @@ from __future__ import absolute_import
 
 import logging
 import re
-import sys
 import warnings
 
 from ._version import __versionstr__
 
 _major, _minor, _patch = [
-    int(x) for x in re.search(r"^(\d+)\.(\d+)\.(\d+)", __versionstr__).groups()
+    int(x) for x in re.search(r"^(\d+)\.(\d+)\.(\d+)", __versionstr__).groups()  # type: ignore
 ]
+
 VERSION = __version__ = (_major, _minor, _patch)
 
 logger = logging.getLogger("opensearch")
@@ -71,7 +71,7 @@ from .exceptions import (
     UnknownDslObject,
     ValidationException,
 )
-from .helpers import AWSV4SignerAsyncAuth, AWSV4SignerAuth
+from .helpers import AWSV4SignerAuth, RequestsAWSV4SignerAuth, Urllib3AWSV4SignerAuth
 from .helpers.aggs import A
 from .helpers.analysis import analyzer, char_filter, normalizer, token_filter, tokenizer
 from .helpers.document import Document, InnerDoc, MetaField
@@ -133,6 +133,7 @@ from .helpers.search import MultiSearch, Search
 from .helpers.update_by_query import UpdateByQuery
 from .helpers.utils import AttrDict, AttrList, DslBase
 from .helpers.wrappers import Range
+from .metrics import Metrics, MetricsEvents, MetricsNone
 from .serializer import JSONSerializer
 from .transport import Transport
 
@@ -149,7 +150,6 @@ __all__ = [
     "JSONSerializer",
     "Connection",
     "RequestsHttpConnection",
-    "AsyncHttpConnection",
     "Urllib3HttpConnection",
     "ImproperlyConfigured",
     "OpenSearchException",
@@ -166,7 +166,8 @@ __all__ = [
     "OpenSearchWarning",
     "OpenSearchDeprecationWarning",
     "AWSV4SignerAuth",
-    "AWSV4SignerAsyncAuth",
+    "Urllib3AWSV4SignerAuth",
+    "RequestsAWSV4SignerAuth",
     "A",
     "AttrDict",
     "AttrList",
@@ -239,17 +240,18 @@ __all__ = [
     "normalizer",
     "token_filter",
     "tokenizer",
+    "__versionstr__",
+    "Metrics",
+    "MetricsEvents",
+    "MetricsNone",
 ]
 
 try:
-    # Asyncio only supported on Python 3.6+
-    if sys.version_info < (3, 6):
-        raise ImportError
-
     from ._async.client import AsyncOpenSearch
     from ._async.http_aiohttp import AIOHttpConnection, AsyncConnection
     from ._async.transport import AsyncTransport
     from .connection import AsyncHttpConnection
+    from .helpers import AWSV4SignerAsyncAuth
 
     __all__ += [
         "AIOHttpConnection",
@@ -257,6 +259,7 @@ try:
         "AsyncTransport",
         "AsyncOpenSearch",
         "AsyncHttpConnection",
+        "AWSV4SignerAsyncAuth",
     ]
 except (ImportError, SyntaxError):
     pass

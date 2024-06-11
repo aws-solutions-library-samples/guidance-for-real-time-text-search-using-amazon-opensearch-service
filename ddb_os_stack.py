@@ -8,7 +8,7 @@ from constructs import Construct
 import os
 import uuid
 
-class DynamoDBOpenSearchStack(Stack):
+class DynamoDBOpenSearchStack2(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
@@ -51,7 +51,7 @@ class DynamoDBOpenSearchStack(Stack):
             enable_dns_hostnames=True
         )
 
-        # Add interface VPC endpoint for Secrets Manager, needed by wiring Lambda
+        # Interface VPC endpoint for Secrets Manager, needed by wiring Lambda
         secrets_manager_endpoint = ec2.InterfaceVpcEndpoint(self, "SecretsManagerEndpoint",
             vpc=vpc,
             service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
@@ -59,17 +59,17 @@ class DynamoDBOpenSearchStack(Stack):
             private_dns_enabled=True
         )
 
-        # Create a log group for VPC Flow Logs
+        # Log group for VPC Flow Logs
         flow_log_group = logs.LogGroup(self, "FlowLogGroup",
             retention=logs.RetentionDays.ONE_MONTH
         )
 
-        # Create the IAM role for VPC Flow Logs
+        # IAM role for VPC Flow Logs
         flow_log_role = iam.Role(self, "FlowLogRole",
             assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com")
         )
 
-        # Add inline policy to the IAM role for VPC Flow Logs
+        # Inline policy to the IAM role for VPC Flow Logs
         flow_log_role.add_to_policy(iam.PolicyStatement(
             actions=[
                 "logs:CreateLogGroup",
@@ -84,7 +84,7 @@ class DynamoDBOpenSearchStack(Stack):
             ]
         ))
 
-        # Create the VPC Flow Logs
+        # VPC Flow Logs
         flow_log = ec2.FlowLog(self, "FlowLog",
             resource_type=ec2.FlowLogResourceType.from_vpc(vpc),
             destination=ec2.FlowLogDestination.to_cloud_watch_logs(flow_log_group, flow_log_role),
@@ -172,8 +172,8 @@ class DynamoDBOpenSearchStack(Stack):
         # Grant SQS write permissions
         queue.grant_send_messages(populate_queue_lambda_role)
 
-        # Lambda Layer
-        lambda_layer = lambda_.LayerVersion(self, "MyLambdaLayer",
+        # Lambda Layers
+        ospy_lambda_layer = lambda_.LayerVersion(self, "OSPyLambdaLayer",
             code=lambda_.Code.from_asset("assets/lambda/layers/opensearch-py"),
             compatible_runtimes=[
                 lambda_.Runtime.PYTHON_3_8,
@@ -183,6 +183,18 @@ class DynamoDBOpenSearchStack(Stack):
                 lambda_.Runtime.PYTHON_3_12
             ],
             description="A layer containing opensearch-py dependencies for Lambda functions"
+        )
+        
+        cfnr_lambda_layer = lambda_.LayerVersion(self, "CFNRLambdaLayer",
+            code=lambda_.Code.from_asset("assets/lambda/layers/cfnresponse"),
+            compatible_runtimes=[
+                lambda_.Runtime.PYTHON_3_8,
+                lambda_.Runtime.PYTHON_3_9,
+                lambda_.Runtime.PYTHON_3_10,
+                lambda_.Runtime.PYTHON_3_11,
+                lambda_.Runtime.PYTHON_3_12
+            ],
+            description="A layer containing cfnresponse dependencies for Lambda functions"
         )
 
         # OpenSearch security group
@@ -266,7 +278,7 @@ class DynamoDBOpenSearchStack(Stack):
                 "OPENSEARCH_ENDPOINT": opensearch_domain.domain_endpoint,
                 "INDEX_NAME": "example-index"
             },
-            layers=[lambda_layer],
+            layers=[ospy_lambda_layer],
             role=ddb_bulk_to_opensearch_lambda_role,
             vpc=vpc,
             timeout=Duration.minutes(15)
@@ -281,7 +293,7 @@ class DynamoDBOpenSearchStack(Stack):
             eventsources.SqsEventSource(queue)
         )
 
-        # Define the DDBStreamToOpenSearch Lambda Function
+        # DDBStreamToOpenSearch Lambda Function
         ddb_stream_to_opensearch_lambda = lambda_.Function(self, "DDBStreamToOpenSearch",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="lambda_function.lambda_handler",
@@ -290,7 +302,7 @@ class DynamoDBOpenSearchStack(Stack):
                 "INDEX_NAME": "example-index",
                 "OPENSEARCH_ENDPOINT": opensearch_domain.domain_endpoint
             },
-            layers=[lambda_layer],
+            layers=[ospy_lambda_layer],
             role=ddb_stream_to_opensearch_lambda_role,
             vpc=vpc,
             timeout=Duration.minutes(15)
@@ -310,7 +322,7 @@ class DynamoDBOpenSearchStack(Stack):
             )
         )
 
-        # Define the PopulateQueue Lambda Function
+        # PopulateQueue Lambda Function
         populate_queue_lambda = lambda_.Function(self, "PopulateQueue",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="lambda_function.lambda_handler",
@@ -320,6 +332,7 @@ class DynamoDBOpenSearchStack(Stack):
                 "SQS_QUEUE_URL": queue.queue_url,
                 "MAX_ITEMS_PER_WORKER": "10000"
             },
+            layers=[cfnr_lambda_layer],
             role=populate_queue_lambda_role,
             timeout=Duration.minutes(15)
         )
@@ -331,16 +344,6 @@ class DynamoDBOpenSearchStack(Stack):
         custom_resource.node.add_dependency(queue)
         custom_resource.node.add_dependency(table)
 
-        # Add EC2 permissions to the Wiring Lambda Role
-        #wiring_lambda_role.add_to_policy(iam.PolicyStatement(
-        #    actions=[
-        #        "ec2:CreateNetworkInterface",
-        #        "ec2:DescribeNetworkInterfaces",
-        #        "ec2:DeleteNetworkInterface"
-        #    ],
-        #    resources=["*"]
-        #))
-
         # Wiring Lambda Function - configures fine grain access control
         wiring_lambda = lambda_.Function(self, "WiringLambda",
                                          code=lambda_.Code.from_asset('assets/lambda/wiring_lambda'),
@@ -348,6 +351,10 @@ class DynamoDBOpenSearchStack(Stack):
                                          vpc=vpc,
                                          handler='lambda_function.lambda_handler',
                                          timeout=Duration.seconds(300),
+                                         layers=[
+                                             cfnr_lambda_layer,
+                                             ospy_lambda_layer
+                                             ],
                                          role=wiring_lambda_role
                                         )
         wiring_lambda.add_environment('admin_user', admin_user)
@@ -368,7 +375,7 @@ class DynamoDBOpenSearchStack(Stack):
 
         # EC2 Jump host - proxy for OpenSearch Dashboards
 
-        # Jump host for and direct access 
+        # Jump host for direct access 
   
         instance = ec2.Instance(self, f'JumpHost',
             instance_type=ec2.InstanceType('t3.medium'),
@@ -430,5 +437,5 @@ class DynamoDBOpenSearchStack(Stack):
                   description="Name of the DynamoDB table")
 
 app = App()
-DynamoDBOpenSearchStack(app, "DynamoDBOpenSearchStack")
+DynamoDBOpenSearchStack2(app, "DynamoDBOpenSearchStack2")
 app.synth()
