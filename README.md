@@ -1,4 +1,4 @@
-# Guidance for Integrating Amazon DynamoDB and Amazon OpenSearch Service
+# Guidance for Real-Time Text Search using Amazon DynamoDB
 
 ## Table of Content
 
@@ -102,14 +102,14 @@ Make sure you have the following tools installed on your environment:
 These deployment instructions are optimized to best work on Amazon Linux 2023 (ami-0eb9d67c52f5c80e5).  Deployment in another OS may require additional steps.
 
 ## Deployment Steps
-
+Guidance for Real-Time Text Search using Amazon DynamoDB
 1. Clone the repo.
    ```bash
-   git clone git@github.com:aws-solutions-library-samples/REPO.git
+   git clone git@github.com:aws-solutions-library-samples/guidance-for-real-time-text-search-using-amazon-dynamodb.git
    ```
 1. cd to the repo folder.
    ```bash
-   cd REPO
+   cd guidance-for-real-time-text-search-using-amazon-dynamodb
    ```
 1. Activate the app's virtual environment.
    ```bash
