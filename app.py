@@ -3,11 +3,11 @@ import os
 
 import aws_cdk as cdk
 
-from ddb_os_stack import DynamoDBOpenSearchStack2
+from ddb_os_stack import DynamoDBOpenSearchStack
 
 
 app = cdk.App()
-DynamoDBOpenSearchStack2(app, "DynamoDBOpenSearchStack2",
+DynamoDBOpenSearchStack(app, "DynamoDBOpenSearchStack", description="SO9390 -Guidance for Real-Time Text Search using Amazon OpenSearch Service"
     )
 
 app.synth()
