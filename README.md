@@ -71,8 +71,6 @@ _We recommend creating a [Budget](https://docs.aws.amazon.com/cost-management/la
 
 ### Sample Cost Table
 
-**Note : Once you have created a sample cost table using AWS Pricing Calculator, copy the cost breakdown to below table and upload a PDF of the cost estimation on BuilderSpace.**
-
 The following table provides a sample cost breakdown for deploying this Guidance with the default parameters in the US East (N. Virginia) Region for one month.
 
 | AWS Service | Dimensions | Cost [USD] | frequency |
