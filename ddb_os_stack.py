@@ -8,7 +8,7 @@ from constructs import Construct
 import os
 import uuid
 
-class DynamoDBOpenSearchStack2(Stack):
+class DynamoDBOpenSearchStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
@@ -437,5 +437,5 @@ class DynamoDBOpenSearchStack2(Stack):
                   description="Name of the DynamoDB table")
 
 app = App()
-DynamoDBOpenSearchStack2(app, "DynamoDBOpenSearchStack2")
+DynamoDBOpenSearchStack(app, "DynamoDBOpenSearchStack")
 app.synth()
