@@ -1,4 +1,4 @@
-# Guidance for Real-Time Text Search using Amazon DynamoDB
+# Guidance for Real-Time Text Search using Amazon OpenSearch Service
 
 ## Table of Content
 
